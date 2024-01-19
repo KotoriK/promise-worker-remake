@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "commonjs",
+        "types": [
+            "jest",
+            "node"
+        ],
+        "outDir": "./test-tmp",
+        "sourceMap": true
+    },
+    "include": [
+        "test/**/*"
+    ]
+}

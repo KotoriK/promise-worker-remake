@@ -1,22 +1,53 @@
-import { default as Worker } from 'web-worker'
-
-import PromiseWorker from '../src/index'
-
-test('string', () => {
-    const worker = new Worker(new URL('./worker-pong.ts', import.meta.url))
+import Worker from 'web-worker';
+import PromiseWorker from '../src/index';
+import { pathToFileURL } from 'node:url';
+test('string', async () => {
+    const worker = new Worker(pathToFileURL(require.resolve('./worker-pong.js')))
     const promiseWorker = new PromiseWorker(worker)
-    return expect(promiseWorker.postMessage('ping')).resolves.toBe('ping')
+    expect(await promiseWorker.postMessage('ping')).toBe('ping')
+    worker.terminate()
 })
 
-test('string promise', () => {
-    const worker = new Worker(new URL('./worker-pong-promise.ts', import.meta.url))
+test('string promise', async () => {
+    const worker = new Worker(pathToFileURL(require.resolve('./worker-pong-promise.js')))
     const promiseWorker = new PromiseWorker(worker)
-    return expect(promiseWorker.postMessage('ping')).resolves.toBe('ping')
+    expect(await promiseWorker.postMessage('ping')).toBe('ping')
+    worker.terminate()
+
 })
 
-test('arraybuffer', () => {
-    const worker = new Worker(new URL('./worker-encode.ts', import.meta.url))
+test('arraybuffer', async () => {
+    const worker = new Worker(pathToFileURL(require.resolve('./worker-encode.js')))
     const promiseWorker = new PromiseWorker(worker)
     const expectValue = new TextEncoder().encode('Hello World!')
-    return expect(promiseWorker.postMessage("Hello World!")).resolves.toStrictEqual(expectValue)
+    worker.addEventListener('message', (e) => {
+        expect(e.data.length).toBe(3)
+        expect(typeof e.data[0]).toBe('number')
+        expect(e.data[1]).toBe(null)
+        expect(e.data[2]).toBeInstanceOf(Uint8Array)
+
+    })
+    expect(await promiseWorker.postMessage("Hello World!")).toStrictEqual(expectValue)
+    worker.terminate()
+
+})
+
+test('arraybuffer:transfer list', async () => {
+    const worker = new Worker(pathToFileURL(require.resolve('./worker-encode-jest-embedded.js')))
+    const promiseWorker = new PromiseWorker(worker)
+    const expectValue = new TextEncoder().encode('Hello World!')
+    expect(await promiseWorker.postMessage("Hello World!")).toStrictEqual(expectValue)
+    worker.terminate()
+
+})
+
+test('handle error', async () => {
+    const worker = new Worker(pathToFileURL(require.resolve('./worker-error.js')))
+    const promiseWorker = new PromiseWorker(worker)
+    try {
+        await promiseWorker.postMessage("Hello World!")
+    } catch (error) {
+        expect((error as Error).message).toBe("Hello World!")
+    }
+    worker.terminate()
 })
